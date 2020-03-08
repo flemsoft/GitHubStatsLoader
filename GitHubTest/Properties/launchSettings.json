@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "GitHubTest": {
+      "commandName": "Project",
+      "commandLineArgs": "microsoft"
+    }
+  }
+}
