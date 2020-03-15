@@ -11,6 +11,8 @@ namespace GitHubTest
     {
         //const int DefaultPageSuze = 30;
 
+        const int MaxAttemptCount = 3;
+
         public string NextPageUri { get; set; }
 
         public bool HasMorePages { get { return NextPageUri != null; } }
@@ -34,13 +36,28 @@ namespace GitHubTest
             //var response = await _client.Repository.GetAllForUser(userlogin, options);
             //var apiInfo = _client.GetLastApiInfo();
 
-            var response = await _client.Connection.Get<IEnumerable<TEntity>>(
-                new Uri(this.NextPageUri),
-                null, "application/json");
+            var exceptions = new List<Exception>();
 
-            this.NextPageUri = FindNextPageUri(response.HttpResponse.Headers);
+            for (var attemptCount = 0; attemptCount < MaxAttemptCount; attemptCount++)
+            {
+                try
+                {
+                    var response = await _client.Connection.Get<IEnumerable<TEntity>>(
+                        new Uri(this.NextPageUri),
+                        null, "application/json");
 
-            return response.Body ?? new TEntity[] { };
+                    this.NextPageUri = FindNextPageUri(response.HttpResponse.Headers);
+
+                    return response.Body ?? new TEntity[] { };
+                }
+                catch (Exception ex)
+                {
+                    // TODO Add errors logs
+                    exceptions.Add(ex);
+                }
+            }
+
+            throw new AggregateException(exceptions);
         }
 
         public static string FindNextPageUri(IReadOnlyDictionary<string, string> headers)

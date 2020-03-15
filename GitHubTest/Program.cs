@@ -21,6 +21,8 @@ namespace GitHubTest
                 return;
             }
 
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
             IGitHubService dataService = new GitHubServiceImpl(GitHubKey);
 
             var loader = new RepositoryInfoLoader(dataService);
@@ -40,6 +42,11 @@ namespace GitHubTest
                     Console.WriteLine($"\t{info.Author.Login} - {info.Total}");
                 }
             }
+        }
+
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Console.WriteLine("Unhandled exception. " + e.ExceptionObject);
         }
     }
 }
