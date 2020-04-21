@@ -1,7 +1,4 @@
-﻿using Octokit;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using GitHubTest.Models;
 
 namespace GitHubTest.Tests.Mocks
 {

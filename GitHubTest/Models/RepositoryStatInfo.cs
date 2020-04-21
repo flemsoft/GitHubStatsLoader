@@ -1,7 +1,4 @@
-﻿using Octokit;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace GitHubTest.Models
 {
@@ -9,9 +6,9 @@ namespace GitHubTest.Models
     {
         public Repository Repository { get; set; }
 
-        public IEnumerable<ContributorInfo> Contributors { get; set; }
+        public IEnumerable<Contributor> Contributors { get; set; }
 
-        public RepositoryStatInfo(Repository repository, IEnumerable<ContributorInfo> contributors)
+        public RepositoryStatInfo(Repository repository, IEnumerable<Contributor> contributors)
         {
             Repository = repository;
             Contributors = contributors;

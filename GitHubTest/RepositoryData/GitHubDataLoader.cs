@@ -1,15 +1,14 @@
-﻿using GitHubTest.Interfaces;
-using Octokit;
+﻿using Octokit;
+using Polly;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace GitHubTest
+namespace GitHubTest.RepositoryData
 {
     public class GitHubDataLoader<TEntity> : IDataLoader<TEntity>
     {
-        //const int DefaultPageSuze = 30;
+        //const int DefaultPageSize = 30;
 
         const int MaxAttemptCount = 3;
 
@@ -31,33 +30,24 @@ namespace GitHubTest
             //{
             //    StartPage = 1,
             //    PageCount = 1,
-            //    PageSize = DefaultPageSuze,
+            //    PageSize = DefaultPageSize,
             //};
             //var response = await _client.Repository.GetAllForUser(userlogin, options);
             //var apiInfo = _client.GetLastApiInfo();
 
-            var exceptions = new List<Exception>();
+            var withRetry = Policy.Handle<Exception>()
+                .RetryAsync(MaxAttemptCount);
 
-            for (var attemptCount = 0; attemptCount < MaxAttemptCount; attemptCount++)
+            return await withRetry.ExecuteAsync(async () =>
             {
-                try
-                {
-                    var response = await _client.Connection.Get<IEnumerable<TEntity>>(
-                        new Uri(this.NextPageUri),
-                        null, "application/json");
+                var response = await _client.Connection.Get<IEnumerable<TEntity>>(
+                    new Uri(this.NextPageUri),
+                    null, "application/json");
 
-                    this.NextPageUri = FindNextPageUri(response.HttpResponse.Headers);
+                this.NextPageUri = FindNextPageUri(response.HttpResponse.Headers);
 
-                    return response.Body ?? new TEntity[] { };
-                }
-                catch (Exception ex)
-                {
-                    // TODO Add errors logs
-                    exceptions.Add(ex);
-                }
-            }
-
-            throw new AggregateException(exceptions);
+                return response.Body ?? new TEntity[] { };
+            });
         }
 
         public static string FindNextPageUri(IReadOnlyDictionary<string, string> headers)

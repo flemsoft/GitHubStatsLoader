@@ -1,9 +1,6 @@
-﻿using GitHubTest.Interfaces;
-using Octokit;
-using System;
+﻿using GitHubTest.RepositoryData;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace GitHubTest.Tests.Mocks

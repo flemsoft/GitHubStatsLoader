@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using GitHubTest.Interfaces;
 using GitHubTest.Models;
-using Octokit;
+using GitHubTest.RepositoryData;
 
 namespace GitHubTest.Tests.Mocks
 {
-    class GitHubServiceMock : IGitHubService
+    class DataLoaderFactoryMock : IDataLoaderFactory
     {
-        public GitHubServiceMock(IEnumerable<Repository> allRepositories, IReadOnlyDictionary<string, ContributorInfo[]> allContributors, int pageSize = 5)
+        public DataLoaderFactoryMock(IEnumerable<Repository> allRepositories, IReadOnlyDictionary<string, Contributor[]> allContributors, int pageSize = 5)
         {
             CreateRepositoryDataLoader = (userLogin) =>
             {
@@ -22,13 +20,18 @@ namespace GitHubTest.Tests.Mocks
             CreateContributorDataLoader = (userLogin, repositoryName) =>
             {
                 if (!allContributors.TryGetValue(repositoryName, out var contributors))
-                    contributors = new ContributorInfo[] { };
+                    contributors = new Contributor[] { };
 
-                return new PageLoaderMock<ContributorInfo>(contributors)
+                return new PageLoaderMock<Contributor>(contributors)
                 {
                     PageSize = pageSize
                 };
             };
+        }
+
+        public IAsyncEnumerable<RepositoryStatInfo> GetRepositoryInfosAsync(string userLogin)
+        {
+            throw new NotImplementedException();
         }
 
         public Func<string, IDataLoader<Repository>> CreateRepositoryDataLoader { get; private set; }
@@ -38,9 +41,9 @@ namespace GitHubTest.Tests.Mocks
             return CreateRepositoryDataLoader(userLogin);
         }
 
-        public Func<string, string, IDataLoader<ContributorInfo>> CreateContributorDataLoader { get; private set; }
+        public Func<string, string, IDataLoader<Contributor>> CreateContributorDataLoader { get; private set; }
 
-        public IDataLoader<ContributorInfo> GetContributorDataLoader(string userLogin, string repositoryName)
+        public IDataLoader<Contributor> GetContributorDataLoader(string userLogin, string repositoryName)
         {
             return CreateContributorDataLoader(userLogin, repositoryName);
         }

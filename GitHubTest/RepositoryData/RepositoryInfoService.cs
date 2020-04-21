@@ -1,26 +1,32 @@
-﻿using GitHubTest.Interfaces;
+﻿using Polly;
+using Polly.Bulkhead;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace GitHubTest
+namespace GitHubTest.RepositoryData
 {
-    public class RepositoryInfoLoader
+    public class RepositoryInfoService : IRepositoryInfoService
     {
-        const int MaxPages = 3;
+        const int MaxPages = 10;
+        const int MaxActiveThreads = 20;
 
-        private readonly IGitHubService _dataService;
+        // We need to limit active working threads to prevent the thread pool flooding due to the huge amount of parallel requests.
+        private readonly AsyncBulkheadPolicy _bulkhead;
 
-        public RepositoryInfoLoader(IGitHubService dataService)
+        private readonly IDataLoaderFactory _dataLoaderFactory;
+        
+        public RepositoryInfoService(IDataLoaderFactory dataLoaderFactory)
         {
-            _dataService = dataService;
+            _dataLoaderFactory = dataLoaderFactory;
+
+            _bulkhead = Policy.BulkheadAsync(MaxActiveThreads, int.MaxValue);
         }
 
         public async IAsyncEnumerable<Models.RepositoryStatInfo> GetRepositoryInfosAsync(string userLogin)
         {
-            var repositoriesLoader = _dataService.GetRepositoryDataLoader(userLogin);
+            var repositoriesLoader = _dataLoaderFactory.GetRepositoryDataLoader(userLogin);
             await foreach (var repositoryPage in GetPagedEntitiesAsync(repositoriesLoader))
             {
                 // We can load statistics in parallel for group of repositories
@@ -33,8 +39,8 @@ namespace GitHubTest
                 }
             }
         }
-
-        private async Task<Models.RepositoryStatInfo> LoadRepositoryStatisticsAsync(Octokit.Repository repository)
+        
+        private async Task<Models.RepositoryStatInfo> LoadRepositoryStatisticsAsync(Models.Repository repository)
         {
             if (string.IsNullOrEmpty(repository.Owner?.Login) ||
                 string.IsNullOrEmpty(repository.Name))
@@ -42,8 +48,8 @@ namespace GitHubTest
                 throw new InvalidOperationException("Invalid GitHub response");
             }
 
-            var contributors = new List<Models.ContributorInfo>();
-            var contributorsLoader = _dataService.GetContributorDataLoader(repository.Owner.Login, repository.Name);
+            var contributors = new List<Models.Contributor>();
+            var contributorsLoader = _dataLoaderFactory.GetContributorDataLoader(repository.Owner.Login, repository.Name);
             await foreach (var contributorsPage in GetPagedEntitiesAsync(contributorsLoader))
             {
                 contributors.AddRange(contributorsPage);
@@ -52,14 +58,15 @@ namespace GitHubTest
             return new Models.RepositoryStatInfo(repository, contributors);
         }
 
-        private static async IAsyncEnumerable<IEnumerable<T>> GetPagedEntitiesAsync<T>(IDataLoader<T> loader)
+        private async IAsyncEnumerable<IEnumerable<T>> GetPagedEntitiesAsync<T>(IDataLoader<T> loader)
         {
             int pagesCount = 0;
 
             // Stop with 10 pages, because these are large list of results
             while (loader.HasMorePages && (pagesCount++ < MaxPages))
             {
-                yield return await loader.LoadPage();
+                yield return await _bulkhead.ExecuteAsync(() =>
+                    loader.LoadPage());
             }
         }
     }

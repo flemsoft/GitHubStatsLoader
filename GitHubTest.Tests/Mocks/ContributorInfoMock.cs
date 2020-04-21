@@ -1,12 +1,8 @@
 ﻿using GitHubTest.Models;
-using Octokit;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GitHubTest.Tests.Mocks
 {
-    class ContributorInfoMock : ContributorInfo
+    class ContributorInfoMock : Contributor
     {
         public ContributorInfoMock(string authorLogin, int total)
         {

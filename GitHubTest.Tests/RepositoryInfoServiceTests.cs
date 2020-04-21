@@ -1,18 +1,16 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using GitHubTest.Tests.Mocks;
 using System.Threading.Tasks;
-using Octokit;
 using GitHubTest.Models;
 using System.Linq;
-using GitHubTest.Interfaces;
+using GitHubTest.RepositoryData;
 
 namespace GitHubTest.Tests
 {
     [TestClass()]
-    public class RepositoryInfoLoaderTests
+    public class RepositoryInfoServiceTests
     {
         [TestMethod()]
         public async Task GetRepositoryInfos_SmallPageSize()
@@ -23,17 +21,17 @@ namespace GitHubTest.Tests
                 new RepositoryMock("repo3", "user1")
             };
 
-            var allContributors = new Dictionary<string, ContributorInfo[]>() {
-                { "repo1", new ContributorInfo[] {
+            var allContributors = new Dictionary<string, Contributor[]>() {
+                { "repo1", new Contributor[] {
                     new ContributorInfoMock("user5", 1),
                     new ContributorInfoMock("user6", 2),
                     new ContributorInfoMock("user7", 5) }
                 }
             };
 
-            IGitHubService dataService = new GitHubServiceMock(allRepositories, allContributors, 2);
+            IDataLoaderFactory factory = new DataLoaderFactoryMock(allRepositories, allContributors, 2);
 
-            var loader = new RepositoryInfoLoader(dataService);
+            var loader = new RepositoryInfoService(factory);
 
             var result = new List<RepositoryStatInfo>();
             await foreach (var repositoryInfo in loader.GetRepositoryInfosAsync("flemsoft"))
@@ -55,17 +53,17 @@ namespace GitHubTest.Tests
                 new RepositoryMock("repo3", "user1")
             };
 
-            var allContributors = new Dictionary<string, ContributorInfo[]>() {
-                { "repo3", new ContributorInfo[] {
+            var allContributors = new Dictionary<string, Contributor[]>() {
+                { "repo3", new Contributor[] {
                     new ContributorInfoMock("user5", 1),
                     new ContributorInfoMock("user6", 2),
                     new ContributorInfoMock("user7", 5) }
                 }
             };
 
-            IGitHubService dataService = new GitHubServiceMock(allRepositories, allContributors, 20);
+            IDataLoaderFactory factory = new DataLoaderFactoryMock(allRepositories, allContributors, 20);
 
-            var loader = new RepositoryInfoLoader(dataService);
+            var loader = new RepositoryInfoService(factory);
 
             var result = new List<RepositoryStatInfo>();
             await foreach (var repositoryInfo in loader.GetRepositoryInfosAsync("flemsoft"))
@@ -88,11 +86,11 @@ namespace GitHubTest.Tests
                 new RepositoryMock("repo3", "user1")
             };
 
-            var allContributors = new Dictionary<string, ContributorInfo[]>();
+            var allContributors = new Dictionary<string, Contributor[]>();
 
-            IGitHubService dataService = new GitHubServiceMock(allRepositories, allContributors);
+            IDataLoaderFactory factory = new DataLoaderFactoryMock(allRepositories, allContributors);
 
-            var loader = new RepositoryInfoLoader(dataService);
+            var loader = new RepositoryInfoService(factory);
 
             var result = new List<RepositoryStatInfo>();
             await foreach (var repositoryInfo in loader.GetRepositoryInfosAsync("flemsoft"))

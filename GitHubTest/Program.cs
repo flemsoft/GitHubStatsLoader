@@ -1,47 +1,33 @@
-﻿using GitHubTest.Interfaces;
+﻿using GitHubTest.Output;
+using GitHubTest.RepositoryData;
+using GitHubTest.Settings;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 
 namespace GitHubTest
 {
     class Program
     {
-        // TODO Put your GitHub token here
-        const string GitHubKey = "";
-
         static async Task Main(string[] args)
         {
-            if (args.Length < 1)
-            {
-                Console.WriteLine("User login not defined");
-                return;
-            }
-
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-            IGitHubService dataService = new GitHubServiceImpl(GitHubKey);
+            var services = ConfigureServices();
+            var serviceProvider = services.BuildServiceProvider();
+            await serviceProvider.GetService<ConsoleApplication>().Run();
+        }
 
-            var loader = new RepositoryInfoLoader(dataService);
-
-            await foreach (var repositoryInfo in loader.GetRepositoryInfosAsync(args[0]))
-            {
-                Console.WriteLine(repositoryInfo.Repository.Name + ":");
-
-                if (!repositoryInfo.Contributors.Any())
-                {
-                    Console.WriteLine($"\tNo contributors");
-                    continue;
-                }
-
-                foreach (var info in repositoryInfo.Contributors.OrderByDescending(x => x.Total))
-                {
-                    Console.WriteLine($"\t{info.Author.Login} - {info.Total}");
-                }
-            }
+        private static IServiceCollection ConfigureServices()
+        {
+            var services = new ServiceCollection();
+            services.AddTransient<ISettingsProvider, SettingsProviderService>();
+            services.AddTransient<IResultReciever, ResultReciever>();
+            services.AddTransient<IDataLoaderFactory, DataLoaderFactoryImpl>();
+            services.AddTransient<IRepositoryInfoService, RepositoryInfoService>();
+            // IMPORTANT! Register our application entry point
+            services.AddTransient<ConsoleApplication>();
+            return services;
         }
 
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
